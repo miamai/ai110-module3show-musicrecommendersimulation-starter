@@ -17,17 +17,59 @@ Replace this paragraph with your own summary of what your version does.
 
 ## How The System Works
 
-Explain your design in plain language.
+This system is a **content-based recommender**: it scores every song in the catalog against a user's taste profile using the song's own attributes — no data from other users is needed.
 
-Some prompts to answer:
+### Song Features
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+Each `Song` stores ten attributes loaded from `data/songs.csv`:
 
-You can include a simple diagram or bullet list if helpful.
+| Attribute | Type | Description |
+|---|---|---|
+| `genre` | categorical | Broad style bucket (pop, lofi, rock, jazz, …) |
+| `mood` | categorical | Emotional tone (happy, chill, intense, moody, …) |
+| `energy` | float 0–1 | Physical intensity — low = calm, high = driving |
+| `valence` | float 0–1 | Musical brightness — high = uplifting, low = dark |
+| `tempo_bpm` | float | Beats per minute |
+| `danceability` | float 0–1 | Rhythmic suitability for movement |
+| `acousticness` | float 0–1 | Organic/natural vs. electronic sound |
+
+### UserProfile
+
+A `UserProfile` stores the user's stated preferences:
+
+- `favorite_mood` — the mood they want right now (e.g. `"happy"`)
+- `target_energy` — how intense they want the music (e.g. `0.8`)
+- `favorite_genre` — their preferred genre (e.g. `"pop"`)
+- `likes_acoustic` — whether they prefer acoustic over electronic sound
+
+### Scoring Rule (one song)
+
+`score_song()` computes a match score in **[0.0, 1.0]** using three Tier 1 features with weighted combination:
+
+```
+energy_score  = 1 - |song.energy  - user.target_energy|
+valence_score = 1 - |song.valence - user.target_valence|
+mood_score    = 1  if song.mood == user.favorite_mood, else 0
+
+score = (0.35 × energy_score) + (0.25 × valence_score) + (0.40 × mood_score)
+```
+
+Weights reflect intent strength: `mood` (0.40) is the user's most explicit request; `energy` (0.35) is the most perceptually obvious numeric difference; `valence` (0.25) adds emotional nuance.
+
+### Ranking Rule (full catalog)
+
+`recommend_songs()` applies the scoring rule to every song, then:
+
+1. Sorts all `(song, score)` pairs by score descending
+2. Returns the top `k` results (default `k = 5`)
+
+```
+User Profile ──► score_song(song_1) ──► 0.983
+                 score_song(song_2) ──► 0.481   ──► sort ──► top-k ──► Recommendations
+                 score_song(song_N) ──► 0.712
+```
+
+The scoring rule grades each song independently; the ranking rule makes the final comparative decision.
 
 ---
 
