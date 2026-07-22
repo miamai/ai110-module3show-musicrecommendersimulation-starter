@@ -39,8 +39,25 @@ A `UserProfile` stores the user's stated preferences:
 
 - `favorite_mood` — the mood they want right now (e.g. `"happy"`)
 - `target_energy` — how intense they want the music (e.g. `0.8`)
+- `target_valence` — how bright/positive they want the music (e.g. `0.8`, defaults to `0.5`)
 - `favorite_genre` — their preferred genre (e.g. `"pop"`)
 - `likes_acoustic` — whether they prefer acoustic over electronic sound
+
+### Example Taste Profile
+
+A concrete profile for an upbeat-pop workout listener:
+
+```python
+user_prefs = {
+    "favorite_genre": "pop",
+    "favorite_mood": "happy",
+    "target_energy": 0.80,
+    "target_valence": 0.80,
+    "likes_acoustic": False,
+}
+```
+
+Against the 18-song catalog, this profile should clearly separate high-energy/high-valence pop and happy tracks (e.g. "Sunrise City," "Gym Hero," "Rooftop Lights") from both intense-but-dark songs (e.g. "Iron Horizon" — high energy, low valence, wrong mood) and mellow songs (lofi, classical, ambient — low energy, wrong mood). See the real ranked output in [Sample Recommendation Output](#sample-recommendation-output).
 
 ### Scoring Rule (one song)
 
@@ -70,6 +87,12 @@ User Profile ──► score_song(song_1) ──► 0.983
 ```
 
 The scoring rule grades each song independently; the ranking rule makes the final comparative decision.
+
+### Potential Biases
+
+- **Mood is all-or-nothing.** Because `mood_score` is a strict boolean (1 or 0), a near-miss mood (e.g. "uplifting" or "carefree") scores no better than a totally opposite mood (e.g. "aggressive") — the system over-rewards exact mood labels over emotional similarity.
+- **Genre isn't scored at all.** Two songs with identical energy/valence/mood but very different genres receive identical scores — the system may under-represent genre preference despite `favorite_genre` being part of the user profile.
+- **`likes_acoustic` is unused.** It's captured on `UserProfile` but not yet factored into the Tier-1 formula — acoustic preference currently has no effect on ranking.
 
 ---
 
@@ -110,15 +133,27 @@ You can add more tests in `tests/test_recommender.py`.
 
 ## Sample Recommendation Output
 
-Paste a sample of your recommender's output here as a text block so a reader can see what it produces:
+Output of `python -m src.main` for the starter profile (`favorite_genre=pop, favorite_mood=happy, target_energy=0.8, target_valence=0.8`):
 
 ```
-# e.g.:
-# User profile: genre=indie, mood=chill, energy=low
-# Recommendations:
-#   1. ...
-#   2. ...
-#   3. ...
+Loading songs from data/songs.csv...
+
+Top recommendations:
+
+Rooftop Lights - Score: 0.98
+Because: mood matches (happy vs happy); energy 0.76 vs target 0.80; valence 0.81 vs target 0.80
+
+Sunrise City - Score: 0.98
+Because: mood matches (happy vs happy); energy 0.82 vs target 0.80; valence 0.84 vs target 0.80
+
+Gym Hero - Score: 0.55
+Because: mood differs (intense vs happy); energy 0.93 vs target 0.80; valence 0.77 vs target 0.80
+
+Concrete Jungle - Score: 0.54
+Because: mood differs (energetic vs happy); energy 0.85 vs target 0.80; valence 0.62 vs target 0.80
+
+Backroad Sundown - Score: 0.53
+Because: mood differs (uplifting vs happy); energy 0.60 vs target 0.80; valence 0.80 vs target 0.80
 ```
 
 **Screenshot or video** *(optional)*: <!-- Insert a screenshot or demo video link here -->
