@@ -162,11 +162,67 @@ Because: mood differs (uplifting vs happy); energy 0.60 vs target 0.80; valence 
 
 ## Experiments You Tried
 
-Use this section to document the experiments you ran. For example:
+Ran four additional user profiles through `python -m src.main` (alongside the starter pop/happy profile above) to stress-test the scoring logic, including one adversarial profile with a mood that doesn't exist in the catalog and self-contradictory preferences.
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+### High-Energy Pop (`favorite_genre=pop, favorite_mood=happy, target_energy=0.90, target_valence=0.85`)
+
+```
+Sunrise City - Score: 0.97
+Because: mood matches (happy vs happy); energy 0.82 vs target 0.90; valence 0.84 vs target 0.85
+
+Rooftop Lights - Score: 0.94
+Because: mood matches (happy vs happy); energy 0.76 vs target 0.90; valence 0.81 vs target 0.85
+
+Gym Hero - Score: 0.57
+Because: mood differs (intense vs happy); energy 0.93 vs target 0.90; valence 0.77 vs target 0.85
+```
+
+Pushing `target_energy`/`target_valence` higher than the starter profile still keeps the two pop/happy tracks on top — confirms mood match dominates as designed.
+
+### Chill Lofi (`favorite_genre=lofi, favorite_mood=chill, target_energy=0.30, target_valence=0.55`)
+
+```
+Library Rain - Score: 0.97
+Because: mood matches (chill vs chill); energy 0.35 vs target 0.30; valence 0.60 vs target 0.55
+
+Spacewalk Thoughts - Score: 0.97
+Because: mood matches (chill vs chill); energy 0.28 vs target 0.30; valence 0.65 vs target 0.55
+
+Midnight Coding - Score: 0.96
+Because: mood matches (chill vs chill); energy 0.42 vs target 0.30; valence 0.56 vs target 0.55
+```
+
+Flipping `target_energy` from 0.90 (High-Energy Pop) to 0.30 flips the entire top 3 from pop tracks to lofi/ambient chill tracks — confirms `energy_score` is doing real work, not just `mood_score`.
+
+### Deep Intense Rock (`favorite_genre=rock, favorite_mood=intense, target_energy=0.90, target_valence=0.30`)
+
+```
+Storm Runner - Score: 0.95
+Because: mood matches (intense vs intense); energy 0.91 vs target 0.90; valence 0.48 vs target 0.30
+
+Gym Hero - Score: 0.87
+Because: mood matches (intense vs intense); energy 0.93 vs target 0.90; valence 0.77 vs target 0.30
+
+Iron Horizon - Score: 0.55
+Because: mood differs (aggressive vs intense); energy 0.97 vs target 0.90; valence 0.20 vs target 0.30
+```
+
+"Iron Horizon" (metal/aggressive) has near-identical energy/valence to "Storm Runner" (rock/intense) but scores 0.40 lower purely because its mood label is "aggressive" not "intense" — a real taste-adjacent song loses hard to an exact mood match.
+
+### Conflicting Signals — adversarial (`favorite_genre=classical, favorite_mood=sad, target_energy=0.90, target_valence=0.90, likes_acoustic=True`)
+
+```
+Sunrise City - Score: 0.56
+Because: mood differs (happy vs sad); energy 0.82 vs target 0.90; valence 0.84 vs target 0.90
+
+Gym Hero - Score: 0.56
+Because: mood differs (intense vs sad); energy 0.93 vs target 0.90; valence 0.77 vs target 0.90
+
+Rooftop Lights - Score: 0.53
+Because: mood differs (happy vs sad); energy 0.76 vs target 0.90; valence 0.81 vs target 0.90
+```
+
+`"sad"` isn't a mood in the catalog at all, so `mood_score` is 0 for every song — ranking silently collapses to energy/valence only. The top picks are all high-energy, electronic pop songs, the opposite of the stated `favorite_genre=classical` and `likes_acoustic=True` — the system doesn't crash, but it also doesn't honor two of the five stated preferences, and nothing in the output signals that.
 
 ---
 
